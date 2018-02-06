@@ -204,10 +204,17 @@ namespace Hearthstone_Deck_Tracker
 		private void OnAttackEvent()
 		{
 			var attackInfo = new AttackInfo((Card)_attackingEntity.Card.Clone(), (Card)_defendingEntity.Card.Clone());
+			var attackInfoWithEntity = new AttackInfoWithEntity(_attackingEntity, _defendingEntity);
 			if(_attackingEntity.IsControlledBy(_game.Player.Id))
+			{
+				GameEvents.OnPlayerBeforeMinionAttack.Execute(attackInfoWithEntity);
 				GameEvents.OnPlayerMinionAttack.Execute(attackInfo);
+			}
 			else
+			{
+				GameEvents.OnOpponentBeforeMinionAttack.Execute(attackInfoWithEntity);
 				GameEvents.OnOpponentMinionAttack.Execute(attackInfo);
+			}
 		}
 
 		public void HandlePlayerMinionPlayed()
@@ -678,6 +685,7 @@ namespace Hearthstone_Deck_Tracker
 		public void HandlePlayerHeroPower(string cardId, int turn)
 		{
 			LogEvent("PlayerHeroPower", cardId, turn);
+			GameEvents.OnPlayerBeforeHeroPower.Execute();
 			_game.SecretsManager.HandleHeroPower();
 			GameEvents.OnPlayerHeroPower.Execute();
 		}
@@ -685,6 +693,7 @@ namespace Hearthstone_Deck_Tracker
 		public void HandleOpponentHeroPower(string cardId, int turn)
 		{
 			LogEvent("OpponentHeroPower", cardId, turn);
+			GameEvents.OnOpponentBeforeHeroPower.Execute();
 			GameEvents.OnOpponentHeroPower.Execute();
 		}
 
@@ -717,6 +726,7 @@ namespace Hearthstone_Deck_Tracker
 				return;
 			_game.Player.CreateInHand(entity, turn);
 			Core.UpdatePlayerCards();
+			GameEvents.OnPlayerGetWithEntity.Execute(entity);
 			GameEvents.OnPlayerGet.Execute(Database.GetCardFromId(cardId));
 		}
 
@@ -741,6 +751,7 @@ namespace Hearthstone_Deck_Tracker
 				Core.UpdatePlayerCards();
 				DeckManager.DetectCurrentDeck().Forget();
 			}
+			GameEvents.OnPlayerDrawWithEntity.Execute(entity);
 			GameEvents.OnPlayerDraw.Execute(Database.GetCardFromId(cardId));
 		}
 
@@ -762,12 +773,14 @@ namespace Hearthstone_Deck_Tracker
 			{
 				if(entity.IsQuest)
 				{
+					GameEvents.OnPlayerBeforePlay.Execute(entity);
 					_game.Player.QuestPlayedFromHand(entity, turn);
 					GameEvents.OnPlayerPlay.Execute(Database.GetCardFromId(cardId));
 				}
 				return;
 			}
 
+			GameEvents.OnPlayerBeforePlay.Execute(entity);
 			switch (fromZone)
 			{
 				case Zone.DECK:
@@ -799,6 +812,7 @@ namespace Hearthstone_Deck_Tracker
 		{
 			if(string.IsNullOrEmpty(cardId))
 				return;
+			GameEvents.OnPlayerBeforePlay.Execute(entity);
 			_game.Player.Play(entity, turn);
 			Core.UpdatePlayerCards();
 			GameEvents.OnPlayerPlay.Execute(Database.GetCardFromId(cardId));
@@ -940,6 +954,7 @@ namespace Hearthstone_Deck_Tracker
 
 		public void HandleOpponentPlay(Entity entity, string cardId, int from, int turn)
 		{
+			GameEvents.OnOpponentBeforePlay.Execute(entity);
 			_game.Opponent.Play(entity, turn);
 			Core.UpdateOpponentCards();
 			GameEvents.OnOpponentPlay.Execute(Database.GetCardFromId(cardId));
@@ -987,6 +1002,7 @@ namespace Hearthstone_Deck_Tracker
 			{
 				if(entity.IsQuest)
 				{
+					GameEvents.OnOpponentBeforePlay.Execute(entity);
 					_game.Opponent.QuestPlayedFromHand(entity, turn);
 					GameEvents.OnOpponentPlay.Execute(Database.GetCardFromId(cardId));
 				}
@@ -1015,6 +1031,7 @@ namespace Hearthstone_Deck_Tracker
 			}
 			else if(!Enum.TryParse(_game.Opponent.Class, out heroClass))
 				return;
+			GameEvents.OnOpponentBeforePlay.Execute(entity);
 			_game.SecretsManager.NewSecret(entity);
 			GameEvents.OnOpponentPlay.Execute(Database.GetCardFromId(cardId));
 		}
